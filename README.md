@@ -1,47 +1,49 @@
-# CI/CD Event Log Generation
+# Incident Management Application
 
-Standalone synthetic CI/CD event log generator extracted from the observability platform.
+Flask and React application for incident tracking plus CI/CD operation logs.
 
-## What Is Included
+## Contents
 
-- `kafka/event_generator/generator.py` generates realistic CI/CD pipeline events.
-- `kafka/producer/producer.py` publishes generated events to Kafka.
-- `services/event_schema.py` validates and normalizes event payloads.
-- `docker-compose.yml` starts local Kafka, Zookeeper, and Kafka UI for testing.
+- `app.py`, `routes/`, `backend/api/` - Flask views and JSON APIs.
+- `models/` - users, incidents, and pipeline event log models.
+- `services/` - DORA metrics, event normalization, alerts, and prediction helpers.
+- `templates/` - server-rendered incident and DORA pages.
+- `frontend/` - React dashboard.
+- `database/schema.sql` - relational schema.
+- `tests/` - backend tests.
+- `DORA_README.md` - deeper notes for the DORA dashboard and event-time metrics.
 
-## Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Generate JSONL Events
+## Run With Docker
 
 ```bash
-python kafka/event_generator/generator.py --count 100000 --output database/sample_cicd_events.jsonl
+docker compose up -d --build
 ```
 
-## Publish Events To Kafka
+The backend is available at http://localhost:5000 and the React frontend at http://localhost:3000.
 
-Start Kafka:
+## CI/CD Operation Log APIs
+
+- `POST /api/observability/events` stores normalized CI/CD events.
+- `POST /dora/api/events` stores one pipeline event for authenticated users.
+- `POST /dora/api/events/bulk` stores multiple pipeline events.
+- `GET /api/observability/metrics/live` returns DORA metrics from logged events.
+
+Example:
+
+```json
+{
+  "event_id": "evt-001",
+  "pipeline_id": "pipeline_001",
+  "repository_id": "repo_001",
+  "event_type": "DEPLOYMENT_COMPLETED",
+  "event_timestamp": "2026-01-01T12:00:00Z",
+  "processing_timestamp": "2026-01-01T12:00:02Z",
+  "status": "SUCCESS"
+}
+```
+
+## Tests
 
 ```bash
-docker-compose up -d
+python -m pytest
 ```
-
-Create or verify the topic:
-
-```bash
-docker-compose exec kafka kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic cicd-events --partitions 6 --replication-factor 1
-```
-
-Publish events:
-
-```bash
-python kafka/event_generator/generator.py --count 100000 --to-kafka --rate 1000
-```
-
-Kafka UI is available at http://localhost:8080.
-
